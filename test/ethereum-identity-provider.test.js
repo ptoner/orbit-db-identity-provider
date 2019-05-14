@@ -8,14 +8,18 @@ const Identities = require('../src/identities')
 const EthIdentityProvider = require('../src/ethereum-identity-provider')
 const Identity = require('../src/identity')
 const keypath = path.resolve('./test/keys')
-let keystore
+const leveldown = require('leveldown')
+const storage = require('orbit-db-storage-adapter')(leveldown)
+
+let keystore, store
 
 const type = EthIdentityProvider.type
 describe('Ethereum Identity Provider', function () {
   before(async () => {
     rmrf.sync(keypath)
     Identities.addIdentityProvider(EthIdentityProvider)
-    keystore = Keystore.create(keypath)
+    store = await storage.createStore(keypath)
+    keystore = new Keystore(store)
   })
 
   after(async () => {
@@ -77,7 +81,7 @@ describe('Ethereum Identity Provider', function () {
     })
 
     it('ethereum identity with incorrect id does not verify', async () => {
-      let identity2 = new Identity('NotAnId', identity.publicKey, identity.signatures.id, identity.signatures.publicKey, identity.type, identity.provider)
+      const identity2 = new Identity('NotAnId', identity.publicKey, identity.signatures.id, identity.signatures.publicKey, identity.type, identity.provider)
       const verified = await Identities.verifyIdentity(identity2)
       assert.strictEqual(verified, false)
     })
